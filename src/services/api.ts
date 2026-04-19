@@ -111,6 +111,7 @@ export async function submitDiagnosis(input: DiagnosisInput): Promise<DiagnosisO
     // 解析流式响应，提取最终消息
     const lines = result.split('\n').filter(line => line.trim());
     let finalContent = '';
+    let reasoningContent = '';
     
     for (const line of lines) {
       if (line.startsWith('data:')) {
@@ -120,15 +121,31 @@ export async function submitDiagnosis(input: DiagnosisInput): Promise<DiagnosisO
           const data = JSON.parse(jsonStr);
           
           // 查找完成事件或消息内容
-          if (data.event === 'conversation.message.delta' && data.data?.content) {
-            finalContent += data.data.content;
-          } else if (data.event === 'conversation.message.completed' && data.data?.content) {
-            finalContent = data.data.content;
+          // 扣子API可能返回content或reasoning_content字段
+          if (data.event === 'conversation.message.delta') {
+            if (data.data?.content) {
+              finalContent += data.data.content;
+            }
+            if (data.data?.reasoning_content) {
+              reasoningContent += data.data.reasoning_content;
+            }
+          } else if (data.event === 'conversation.message.completed') {
+            if (data.data?.content) {
+              finalContent = data.data.content;
+            }
+            if (data.data?.reasoning_content) {
+              reasoningContent = data.data.reasoning_content;
+            }
           }
         } catch {
           // 忽略解析错误
         }
       }
+    }
+    
+    // 如果content为空但有reasoning_content，使用reasoning_content
+    if (!finalContent && reasoningContent) {
+      finalContent = reasoningContent;
     }
 
     if (!finalContent) {
