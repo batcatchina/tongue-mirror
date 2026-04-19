@@ -1,4 +1,5 @@
 import type { DiagnosisInput, DiagnosisOutput, DiagnosisEvidence, AcupuncturePoint } from '@/types';
+import { getMeridian, getEffect } from './acupoint_data';
 
 const API_BASE_URL = 'https://api.coze.cn';
 const BOT_ID = '7630373624734236672';
@@ -27,13 +28,23 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
   const mainPointsText = mainPointsMatch ? mainPointsMatch[1].trim() : '';
   const mainPoints: AcupuncturePoint[] = mainPointsText.split(/[、,，]/)
     .map(s => s.trim()).filter(s => s)
-    .map(point => ({ point, meridian: '待确认', effect: '主穴', technique: '平补平泻' }));
+    .map(point => ({ 
+      point, 
+      meridian: getMeridian(point), 
+      effect: getEffect(point), 
+      technique: '平补平泻' 
+    }));
 
   const secondaryPointsMatch = markdown.match(/\*\*配穴\*\*[：:]\s*([^\n]+)/);
   const secondaryPointsText = secondaryPointsMatch ? secondaryPointsMatch[1].trim() : '';
   const secondaryPoints: AcupuncturePoint[] = secondaryPointsText.split(/[、,，]/)
     .map(s => s.trim()).filter(s => s)
-    .map(point => ({ point, meridian: '待确认', effect: '配穴', technique: '平补平泻' }));
+    .map(point => ({ 
+      point, 
+      meridian: getMeridian(point), 
+      effect: getEffect(point), 
+      technique: '平补平泻' 
+    }));
 
   const techniqueMatch = markdown.match(/\*\*刺法\*\*[：:]\s*([^\n]+)/);
   const techniquePrinciple = techniqueMatch ? techniqueMatch[1].trim() : '';
