@@ -1,19 +1,27 @@
 import type { DiagnosisInput, DiagnosisOutput, DiagnosisEvidence, AcupuncturePoint } from '@/types';
 
+// 扣子API配置
 const API_BASE_URL = 'https://api.coze.cn';
 const BOT_ID = '7630373624734236672';
 const API_TOKEN = 'pat_RpduRPvBPQIbpRLtAXy9NBFruewZlVKN4gH4aLgby6z2MgjNEejR2E7X8PV1L2iJ';
 
+/**
+ * 从Markdown格式解析辨证结果
+ */
 function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
+  // 提取主要证型
   const primaryMatch = markdown.match(/\*\*主要证型\*\*[：:]\s*([^\n]+)/);
   const primarySyndrome = primaryMatch ? primaryMatch[1].trim() : '辨证分析完成';
 
+  // 提取证型得分
   const scoreMatch = markdown.match(/\*\*证型得分\*\*[：:]\s*(\d+)/);
   const syndromeScore = scoreMatch ? parseInt(scoreMatch[1]) : 5;
 
+  // 提取病机分析
   const pathogenesisMatch = markdown.match(/\*\*病机分析\*\*[：:]\s*([^\n]+)/);
   const pathogenesis = pathogenesisMatch ? pathogenesisMatch[1].trim() : '';
 
+  // 提取辨证依据 - 转换为正确类型
   const evidenceMatches = markdown.matchAll(/\d+\.\s*([^\n]+)/g);
   const diagnosisEvidence: DiagnosisEvidence[] = Array.from(evidenceMatches, (m, idx) => ({
     feature: m[1].trim(),
@@ -23,24 +31,41 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
     ruleId: `rule_${idx + 1}`
   })).slice(0, 5);
 
+  // 提取主穴 - 转换为正确类型
   const mainPointsMatch = markdown.match(/\*\*主穴\*\*[：:]\s*([^\n]+)/);
   const mainPointsText = mainPointsMatch ? mainPointsMatch[1].trim() : '';
   const mainPoints: AcupuncturePoint[] = mainPointsText.split(/[、,，]/)
-    .map(s => s.trim()).filter(s => s)
-    .map(point => ({ point, meridian: '待确认', effect: '主穴', technique: '平补平泻' }));
+    .map(s => s.trim())
+    .filter(s => s)
+    .map(point => ({
+      point,
+      meridian: '待确认',
+      effect: '主穴',
+      technique: '平补平泻'
+    }));
 
+  // 提取配穴 - 转换为正确类型
   const secondaryPointsMatch = markdown.match(/\*\*配穴\*\*[：:]\s*([^\n]+)/);
   const secondaryPointsText = secondaryPointsMatch ? secondaryPointsMatch[1].trim() : '';
   const secondaryPoints: AcupuncturePoint[] = secondaryPointsText.split(/[、,，]/)
-    .map(s => s.trim()).filter(s => s)
-    .map(point => ({ point, meridian: '待确认', effect: '配穴', technique: '平补平泻' }));
+    .map(s => s.trim())
+    .filter(s => s)
+    .map(point => ({
+      point,
+      meridian: '待确认',
+      effect: '配穴',
+      technique: '平补平泻'
+    }));
 
+  // 提取刺法
   const techniqueMatch = markdown.match(/\*\*刺法\*\*[：:]\s*([^\n]+)/);
   const techniquePrinciple = techniqueMatch ? techniqueMatch[1].trim() : '';
 
+  // 提取治疗频次
   const frequencyMatch = markdown.match(/\*\*治疗频次\*\*[：:]\s*([^\n]+)/);
   const treatmentFrequency = frequencyMatch ? frequencyMatch[1].trim() : '';
 
+  // 提取生活调护
   const lifeCareSection = markdown.split(/##\s*生活调护/)[1] || '';
   const lifeCareItems = lifeCareSection.match(/[-•]\s*([^\n]+)/g) || [];
   const lifeCareAdvice = lifeCareItems.map(item => item.replace(/^[-•]\s*/, '').trim()).slice(0, 5);
@@ -136,11 +161,10 @@ export async function submitDiagnosis(input: DiagnosisInput): Promise<DiagnosisO
     result += decoder.decode(value, { stream: true });
   }
 
-  // 解析SSE，只收集type="answer"的reasoning_content
   const lines = result.split('\n');
-  let answerContent = '';
+  let finalContent = '';
+  let reasoningContent = '';
   let currentEvent = '';
-  
   
   for (const line of lines) {
     const trimmed = line.trim();
@@ -152,25 +176,24 @@ export async function submitDiagnosis(input: DiagnosisInput): Promise<DiagnosisO
         if (jsonStr === '[DONE]') continue;
         const data = JSON.parse(jsonStr);
         
-        // 只收集type="answer"的消息
-        if (data.type === 'answer' && data.reasoning_content) {
-          answerContent += data.reasoning_content;
+        if (currentEvent === 'conversation.message.delta') {
+          if (data.reasoning_content) reasoningContent += data.reasoning_content;
+          if (data.content) finalContent += data.content;
         }
-        
-        // conversation.message.completed事件可能有完整content
-        if (currentEvent === 'conversation.message.completed' && data.type === 'answer' && data.content) {
-          answerContent = data.content;
+        if (currentEvent === 'conversation.message.completed' && data.content) {
+          finalContent = data.content;
         }
       } catch {}
     }
   }
   
-  if (!answerContent) throw new Error('未获取到辨证结果');
+  if (!finalContent && reasoningContent) finalContent = reasoningContent;
+  if (!finalContent) throw new Error('未获取到辨证结果');
 
   try {
-    return typeof answerContent === 'string' ? JSON.parse(answerContent) : answerContent;
+    return typeof finalContent === 'string' ? JSON.parse(finalContent) : finalContent;
   } catch {
-    return parseMarkdownDiagnosis(answerContent);
+    return parseMarkdownDiagnosis(finalContent);
   }
 }
 
