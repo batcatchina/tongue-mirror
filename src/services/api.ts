@@ -1,10 +1,10 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import type { DiagnosisInput, DiagnosisOutput } from '@/types';
 
-// 扣子API配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.coze.cn';
-const BOT_ID = import.meta.env.VITE_BOT_ID || '';
-const API_TOKEN = import.meta.env.VITE_API_TOKEN || '';
+// 扣子API配置 - 直接配置（生产环境）
+const API_BASE_URL = 'https://api.coze.cn';
+const BOT_ID = '7630373624734236672';
+const API_TOKEN = 'pat_RpduRPvBPQIbpRLtAXy9NBFruewZlVKN4gH4aLgby6z2MgjNEejR2E7X8PV1L2iJ';
 
 // 创建axios实例
 const apiClient: AxiosInstance = axios.create({
