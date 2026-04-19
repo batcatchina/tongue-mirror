@@ -18,8 +18,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "VITE_API_BASE_URL": "@tongue_mirror_api_base_url"
-  }
+  ]
 }
