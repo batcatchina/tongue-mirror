@@ -50,12 +50,11 @@ export async function submitDiagnosis(input: DiagnosisInput): Promise<DiagnosisO
     throw new Error('请配置 VITE_API_TOKEN 环境变量');
   }
 
-  // 构造扣子API请求（v3格式）
+  // 构造扣子API请求（v3格式，使用流式响应）
   const requestPayload = {
     bot_id: BOT_ID,
     user_id: generateUserId(),
-    stream: false,
-    auto_save_history: true,
+    stream: true,  // 使用流式响应
     additional_messages: [{
       role: 'user',
       content: JSON.stringify({
@@ -78,70 +77,89 @@ export async function submitDiagnosis(input: DiagnosisInput): Promise<DiagnosisO
   };
 
   try {
-    // 第一步：发起对话
-    const chatResponse = await apiClient.post('/v3/chat', requestPayload);
-    const chatResult = chatResponse.data;
-    
-    if (chatResult.code !== 0) {
-      throw new Error(chatResult.msg || '发起对话失败');
+    // 使用流式响应模式
+    const response = await fetch(`${API_BASE_URL}/v3/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${API_TOKEN}`,
+      },
+      body: JSON.stringify(requestPayload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API请求失败: ${response.status}`);
     }
-    
-    const chatId = chatResult.data?.id;
-    const conversationId = chatResult.data?.conversation_id;
-    
-    if (!chatId || !conversationId) {
-      throw new Error('未获取到对话ID');
+
+    // 读取流式响应
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('无法读取响应流');
     }
-    
-    // 第二步：轮询等待对话完成
-    let isCompleted = false;
-    let retryCount = 0;
-    const maxRetries = 30; // 最多等待60秒
-    
-    while (!isCompleted && retryCount < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // 等待2秒
+
+    let result = '';
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
       
-      const statusResponse = await apiClient.get(`/v3/chat/retrieve?conversation_id=${conversationId}&chat_id=${chatId}`);
-      const statusData = statusResponse.data;
-      
-      if (statusData.data?.status === 'completed') {
-        isCompleted = true;
-      } else if (statusData.data?.status === 'failed') {
-        throw new Error('对话处理失败');
+      const chunk = decoder.decode(value, { stream: true });
+      result += chunk;
+    }
+
+    // 解析流式响应，提取最终消息
+    const lines = result.split('\n').filter(line => line.trim());
+    let finalContent = '';
+    
+    for (const line of lines) {
+      if (line.startsWith('data:')) {
+        try {
+          const jsonStr = line.slice(5).trim();
+          if (jsonStr === '[DONE]') continue;
+          const data = JSON.parse(jsonStr);
+          
+          // 查找完成事件或消息内容
+          if (data.event === 'conversation.message.delta' && data.data?.content) {
+            finalContent += data.data.content;
+          } else if (data.event === 'conversation.message.completed' && data.data?.content) {
+            finalContent = data.data.content;
+          }
+        } catch {
+          // 忽略解析错误
+        }
       }
-      retryCount++;
     }
-    
-    if (!isCompleted) {
-      throw new Error('对话处理超时');
+
+    if (!finalContent) {
+      // 尝试直接解析整个响应
+      try {
+        const jsonResponse = JSON.parse(result);
+        if (jsonResponse.data?.messages) {
+          const assistantMsg = jsonResponse.data.messages.find((m: any) => m.role === 'assistant');
+          if (assistantMsg) {
+            finalContent = assistantMsg.content;
+          }
+        }
+      } catch {
+        // 忽略
+      }
     }
-    
-    // 第三步：获取消息列表
-    const messagesResponse = await apiClient.get(`/v3/chat/message/list?conversation_id=${conversationId}&chat_id=${chatId}`);
-    const messagesData = messagesResponse.data;
-    
-    if (messagesData.code !== 0) {
-      throw new Error(messagesData.msg || '获取消息失败');
-    }
-    
-    // 找到助手回复的消息
-    const assistantMessage = messagesData.data?.find((msg: any) => msg.role === 'assistant' && msg.type === 'answer');
-    
-    if (!assistantMessage) {
+
+    if (!finalContent) {
       throw new Error('未获取到辨证结果');
     }
-    
+
     // 解析返回的内容
     let diagnosisResult: DiagnosisOutput;
     
     try {
-      const content = assistantMessage.content;
-      diagnosisResult = typeof content === 'string' ? JSON.parse(content) : content;
+      diagnosisResult = typeof finalContent === 'string' ? JSON.parse(finalContent) : finalContent;
     } catch {
       // 如果解析失败，构造默认结构
       diagnosisResult = {
         diagnosisResult: {
-          primarySyndrome: '辨证结果',
+          primarySyndrome: finalContent || '辨证结果',
           syndromeScore: 0,
           confidence: 0,
           secondarySyndromes: [],
