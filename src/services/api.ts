@@ -308,9 +308,16 @@ export async function submitDiagnosis(
   
   // 如果有图片，添加图片内容
   if (input.imageData) {
+    // 确保图片数据是有效的 base64 URL
+    const imageUrl = input.imageData.startsWith('data:') 
+      ? input.imageData 
+      : `data:image/jpeg;base64,${input.imageData}`;
+    
+    console.log(`[舌照上传] 图片数据长度: ${imageUrl.length} 字符`);
+    
     messageContent.push({
       type: 'image_url',
-      image_url: { url: input.imageData }
+      image_url: { url: imageUrl }
     });
   }
   
