@@ -100,6 +100,7 @@ export interface DiagnosisInput {
   symptoms?: Symptom[];
   patientInfo: PatientInfo;
   options?: Partial<DiagnosisOptions>;
+  imageData?: string; // 舌象图片的base64数据
   metadata?: {
     submissionTime?: string;
     userType?: '中医师' | '学生' | '研究者';

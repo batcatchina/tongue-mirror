@@ -37,6 +37,7 @@ const DiagnosisPage: React.FC = () => {
     removeSymptom,
     updateSymptom,
     setPatientInfo,
+    setImageData,
     setDiagnosisResult,
     setIsAnalyzing,
     setError,
@@ -140,7 +141,7 @@ const DiagnosisPage: React.FC = () => {
               
               {/* 图片上传 */}
               <div className="mb-6">
-                <ImageUpload onChange={() => {}} />
+                <ImageUpload onChange={(imageData) => setImageData(imageData)} />
               </div>
               
               <div className="tcm-divider" />

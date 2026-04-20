@@ -38,6 +38,7 @@ interface DiagnosisState {
   inputFeatures: InputFeatures;
   symptoms: Symptom[];
   patientInfo: PatientInfo;
+  imageData: string | null; // 舌象图片base64数据
   
   // 输出状态
   diagnosisResult: DiagnosisOutput | null;
@@ -52,6 +53,7 @@ interface DiagnosisState {
   caseList: CaseRecord[];
   
   // 操作方法
+  setImageData: (data: string | null) => void;
   setInputFeatures: (features: Partial<InputFeatures>) => void;
   setTongueColor: (color: string, confidence?: number) => void;
   setTongueShape: (shape: string, confidence?: number) => void;
@@ -91,6 +93,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       inputFeatures: initialFeatures,
       symptoms: [],
       patientInfo: initialPatientInfo,
+      imageData: null,
       diagnosisResult: null,
       isAnalyzing: false,
       error: null,
@@ -99,6 +102,9 @@ export const useDiagnosisStore = create<DiagnosisState>()(
       // 进度状态
       currentStep: 'idle',
       stepProgress: 0,
+      
+      // 设置图片数据
+      setImageData: (data) => set({ imageData: data }),
       
       // 设置舌象特征
       setInputFeatures: (features) =>
@@ -217,6 +223,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           inputFeatures: initialFeatures,
           symptoms: [],
           patientInfo: initialPatientInfo,
+          imageData: null,
           diagnosisResult: null,
           error: null,
           currentStep: 'idle',
@@ -230,6 +237,7 @@ export const useDiagnosisStore = create<DiagnosisState>()(
           input_features: state.inputFeatures,
           symptoms: state.symptoms,
           patientInfo: state.patientInfo,
+          imageData: state.imageData || undefined,
         };
       },
       

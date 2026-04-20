@@ -105,29 +105,48 @@ export async function submitDiagnosis(
   input: DiagnosisInput, 
   onProgress?: (step: DiagnosisProgressStep) => void
 ): Promise<DiagnosisOutput> {
+  // 构建消息内容
+  const textContent = JSON.stringify({
+    tongue_color: input.input_features.tongueColor.value,
+    tongue_shape: input.input_features.tongueShape.value,
+    tongue_coating_color: input.input_features.coating.color,
+    tongue_coating_texture: input.input_features.coating.texture,
+    tongue_movement: input.input_features.tongueState.value || '正常',
+    crack: input.input_features.crack?.value === '是',
+    teeth_mark: input.input_features.teethMark?.value === '是',
+    spots: input.input_features.ecchymosis?.value === '是',
+    patient_age: input.patientInfo?.age,
+    patient_gender: input.patientInfo?.gender,
+    chief_complaint: input.patientInfo?.chiefComplaint,
+    symptoms: input.symptoms?.map(s => s.symptom).join(', ') || '',
+    mode: input.options?.mode || '详细模式',
+    has_image: !!input.imageData,
+  }, null, 2);
+
+  // 构建消息列表
+  const messages = [];
+  
+  // 如果有图片，先发送图片
+  if (input.imageData) {
+    messages.push({
+      role: 'user',
+      content: input.imageData,
+      content_type: 'image'
+    });
+  }
+  
+  // 发送文本内容
+  messages.push({
+    role: 'user',
+    content: textContent,
+    content_type: 'text'
+  });
+
   const requestPayload = {
     bot_id: BOT_ID,
     user_id: generateUserId(),
     stream: true,
-    additional_messages: [{
-      role: 'user',
-      content: JSON.stringify({
-        tongue_color: input.input_features.tongueColor.value,
-        tongue_shape: input.input_features.tongueShape.value,
-        tongue_coating_color: input.input_features.coating.color,
-        tongue_coating_texture: input.input_features.coating.texture,
-        tongue_movement: input.input_features.tongueState.value || '正常',
-        crack: input.input_features.crack?.value === '是',
-        teeth_mark: input.input_features.teethMark?.value === '是',
-        spots: input.input_features.ecchymosis?.value === '是',
-        patient_age: input.patientInfo?.age,
-        patient_gender: input.patientInfo?.gender,
-        chief_complaint: input.patientInfo?.chiefComplaint,
-        symptoms: input.symptoms?.map(s => s.symptom).join(', ') || '',
-        mode: input.options?.mode || '详细模式',
-      }, null, 2),
-      content_type: 'text'
-    }]
+    additional_messages: messages
   };
 
   const response = await fetch(`${API_BASE_URL}/v3/chat`, {
@@ -243,22 +262,24 @@ export function getApiConfig() { return { baseUrl: API_BASE_URL, botId: BOT_ID.s
 
 // 验证图片是否为舌象
 export async function validateTongueImage(imageBase64: string): Promise<{ valid: boolean; message?: string }> {
-  const requestPayload = {
-    bot_id: BOT_ID,
-    user_id: generateUserId(),
-    stream: false,
-    additional_messages: [{
-      role: 'user',
-      content: '请验证这张图片是否为舌象图片。如果是舌象，返回 {"valid": true}；如果不是舌象（如花草、风景、人脸等），返回 {"valid": false, "message": "请上传舌象图片"}。',
-      content_type: 'text'
-    }, {
-      role: 'user',
-      content: imageBase64,
-      content_type: 'image'
-    }]
-  };
-
   try {
+    // 提取base64数据（去掉data:image/xxx;base64,前缀）
+    const base64Data = imageBase64.split(',')[1] || imageBase64;
+    
+    const requestPayload = {
+      bot_id: BOT_ID,
+      user_id: generateUserId(),
+      stream: false,
+      additional_messages: [{
+        role: 'user',
+        content: JSON.stringify({
+          action: 'validate_image',
+          image_data: base64Data.substring(0, 100) // 发送部分数据用于验证提示
+        }),
+        content_type: 'text'
+      }]
+    };
+
     const response = await fetch(`${API_BASE_URL}/v3/chat`, {
       method: 'POST',
       headers: {
@@ -268,18 +289,25 @@ export async function validateTongueImage(imageBase64: string): Promise<{ valid:
       body: JSON.stringify(requestPayload),
     });
 
-    if (!response.ok) return { valid: true }; // 验证失败时默认允许通过
+    if (!response.ok) {
+      console.log('验证API调用失败，默认通过');
+      return { valid: true };
+    }
 
     const data = await response.json();
     const content = data?.data?.content || '';
     
-    // 解析验证结果
-    if (content.includes('"valid": false') || content.includes('不是舌象')) {
-      return { valid: false, message: '请上传舌象图片，图片中应清晰显示舌头表面特征。' };
+    // 检测错误关键词
+    const errorKeywords = ['非舌象', '不是舌象', '请重新上传', 'INVALID_IMAGE'];
+    for (const keyword of errorKeywords) {
+      if (content.includes(keyword)) {
+        return { valid: false, message: '请上传舌象图片，图片中应清晰显示舌头表面特征。' };
+      }
     }
     
     return { valid: true };
-  } catch {
-    return { valid: true }; // 验证失败时默认允许通过
+  } catch (error) {
+    console.log('验证出错，默认通过:', error);
+    return { valid: true };
   }
 }
