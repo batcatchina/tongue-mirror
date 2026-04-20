@@ -96,9 +96,10 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
           const pointStr = m.replace('加', '').trim();
           // 按顿号、逗号分割
           const pointList = pointStr.split(/[、,，]/);
-          pointList.forEach(p => p.trim()).forEach(p => {
-            if (p && !p.includes('无') && !/^\d+$/.test(p)) {
-              points.push(p);
+          pointList.forEach(p => {
+            const trimmed = p.trim();
+            if (trimmed && !trimmed.includes('无') && !/^\d+$/.test(trimmed)) {
+              points.push(trimmed);
             }
           });
         });
