@@ -145,7 +145,7 @@ export const ACUPOINT_MERIDIAN_MAP: Record<string, string> = {
   '阑尾穴': '经外奇穴',
   '八风': '经外奇穴',
   '八邪': '经外奇穴',
-};
+  '安眠': '经外奇穴',
 
 // 穴位功效映射
 export const ACUPOINT_EFFECT_MAP: Record<string, string> = {

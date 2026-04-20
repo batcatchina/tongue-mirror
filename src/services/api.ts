@@ -77,20 +77,43 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
     }
   }
   
-  // 解析配穴 - 支持多种格式
-  const secondaryPointsPatterns = [
-    /\*\*配穴\*\*[：:]\s*([^\n]+)/,
-    /配穴[：:]\s*([^\n]+)/,
-    /\*\*随证配穴\*\*[：:]\s*([^\n]+)/,
-  ];
-  let secondaryPointsText = '';
-  for (const pattern of secondaryPointsPatterns) {
-    const match = markdown.match(pattern);
-    if (match) {
-      secondaryPointsText = match[1].trim();
-      break;
+  // 解析配穴 - 支持条件格式（如"心烦明显：加劳宫"、"失眠严重：加百会、申脉"）
+  const parseSecondaryPoints = (md: string): AcupuncturePoint[] => {
+    // 查找配穴区域（从"配穴："到"刺法"或下一个##）
+    const match = md.match(/配穴[：:]\s*([\s\S]*?)(?=\n刺法|##\s|\n\n|$)/);
+    if (!match) return [];
+    
+    const section = match[1];
+    const points: string[] = [];
+    
+    // 逐行处理
+    const lines = section.split('\n');
+    for (const line of lines) {
+      // 提取所有 "加XXX" 格式
+      const addMatches = line.match(/加([^\n]+)/g);
+      if (addMatches) {
+        addMatches.forEach(m => {
+          const pointStr = m.replace('加', '').trim();
+          // 按顿号、逗号分割
+          const pointList = pointStr.split(/[、,，]/);
+          pointList.forEach(p => p.trim()).forEach(p => {
+            if (p && !p.includes('无') && !/^\d+$/.test(p)) {
+              points.push(p);
+            }
+          });
+        });
+      }
     }
-  }
+    
+    // 去重并过滤空值
+    return [...new Set(points)].filter(p => p)
+      .map(point => ({ 
+        point, 
+        meridian: getMeridian(point), 
+        effect: getEffect(point), 
+        technique: '平补平泻' 
+      }));
+  };
   
   const mainPoints: AcupuncturePoint[] = mainPointsText.split(/[、,，]/)
     .map(s => s.trim()).filter(s => s && !s.includes('无'))
@@ -101,14 +124,7 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
       technique: '平补平泻' 
     }));
 
-  const secondaryPoints: AcupuncturePoint[] = secondaryPointsText.split(/[、,，]/)
-    .map(s => s.trim()).filter(s => s && !s.includes('无'))
-    .map(point => ({ 
-      point, 
-      meridian: getMeridian(point), 
-      effect: getEffect(point), 
-      technique: '平补平泻' 
-    }));
+  const secondaryPoints = parseSecondaryPoints(markdown);
 
   const techniqueMatch = markdown.match(/\*\*刺法\*\*[：:]\s*([^\n]+)/);
   const techniquePrinciple = techniqueMatch ? techniqueMatch[1].trim() : '';
