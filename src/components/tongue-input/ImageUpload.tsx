@@ -89,6 +89,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => 
           <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full">
             ✓ 已上传
           </div>
+          {/* 提示用户确认 */}
+          <div className="p-2 bg-amber-50 border-t border-amber-200 text-xs text-amber-700 text-center">
+            ⚠️ 请确保上传的是清晰的舌象照片，并手动选择舌象特征
+          </div>
         </div>
       ) : (
         <div
