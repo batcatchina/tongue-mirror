@@ -266,6 +266,21 @@ export const useDiagnosisStore = create<DiagnosisState>()(
     }),
     {
       name: 'tongue-diagnosis-storage',
+      version: 2, // 版本升级，自动清除旧缓存
+      migrate: (persistedState: any, version: number) => {
+        // 版本0或1的数据迁移：重置为初始状态
+        if (version < 2) {
+          return {
+            inputFeatures: initialFeatures,
+            symptoms: [],
+            patientInfo: initialPatientInfo,
+            imageData: null,
+            diagnosisResult: null,
+            caseList: [],
+          };
+        }
+        return persistedState;
+      },
     }
   )
 );
