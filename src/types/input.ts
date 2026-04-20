@@ -1,6 +1,6 @@
 // 舌象特征类型定义
 export interface TongueColor {
-  value: string;
+  value: string;  // 允许任意字符串包括空字符串
   confidence?: number;
   distributionFeatures?: DistributionFeature[];
 }
@@ -12,7 +12,7 @@ export interface DistributionFeature {
 }
 
 export interface TongueShape {
-  value: '胖大' | '瘦薄' | '正常';
+  value: '胖大' | '瘦薄' | '正常' | '';
   confidence?: number;
 }
 
@@ -29,14 +29,14 @@ export interface TeethMark {
 }
 
 export interface TongueState {
-  value: '强硬' | '痿软' | '歪斜' | '颤动' | '正常';
+  value: '强硬' | '痿软' | '歪斜' | '颤动' | '正常' | '';
   degree?: '轻微' | '中等' | '明显' | '严重';
 }
 
 export interface TongueCoating {
-  color: '薄白' | '白厚' | '黄' | '灰黑' | '剥落';
-  texture: '薄' | '厚' | '正常';
-  moisture: '润' | '燥' | '正常';
+  color: '薄白' | '白厚' | '黄' | '灰黑' | '剥落' | '';
+  texture: '薄' | '厚' | '正常' | '';
+  moisture: '润' | '燥' | '正常' | '';
   greasy?: '腻' | '腐' | '否';
 }
 

@@ -91,7 +91,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => 
           </div>
           {/* 提示用户确认 */}
           <div className="p-2 bg-amber-50 border-t border-amber-200 text-xs text-amber-700 text-center">
-            ⚠️ 请确保上传的是清晰的舌象照片，并手动选择舌象特征
+            ⚠️ 请确保上传的是清晰的舌象照片，并手动确认舌象特征
           </div>
         </div>
       ) : (
@@ -115,8 +115,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => 
           />
           <label htmlFor="tongue-image-upload" className="cursor-pointer">
             <div className="text-4xl mb-3">📷</div>
-            <p className="text-stone-600 font-medium">点击或拖拽上传舌象图片</p>
+            <p className="text-stone-600 font-medium">点击或拖拽上传舌象图片（可选）</p>
             <p className="text-stone-400 text-sm mt-1">支持 JPG、PNG 格式，最大 10MB</p>
+            <p className="text-primary-600 text-xs mt-2 bg-primary-50 px-2 py-1 rounded inline-block">
+              💡 有图可自动识别舌象特征，无图也能手动输入辨证
+            </p>
           </label>
         </div>
       )}

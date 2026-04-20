@@ -24,10 +24,38 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
     ruleId: `rule_${idx + 1}`
   })).slice(0, 5);
 
-  const mainPointsMatch = markdown.match(/\*\*主穴\*\*[：:]\s*([^\n]+)/);
-  const mainPointsText = mainPointsMatch ? mainPointsMatch[1].trim() : '';
+  // 解析主穴 - 支持多种格式
+  const mainPointsPatterns = [
+    /\*\*主穴\*\*[：:]\s*([^\n]+)/,
+    /主穴[：:]\s*([^\n]+)/,
+    /\*\*针灸主穴\*\*[：:]\s*([^\n]+)/,
+  ];
+  let mainPointsText = '';
+  for (const pattern of mainPointsPatterns) {
+    const match = markdown.match(pattern);
+    if (match) {
+      mainPointsText = match[1].trim();
+      break;
+    }
+  }
+  
+  // 解析配穴 - 支持多种格式
+  const secondaryPointsPatterns = [
+    /\*\*配穴\*\*[：:]\s*([^\n]+)/,
+    /配穴[：:]\s*([^\n]+)/,
+    /\*\*随证配穴\*\*[：:]\s*([^\n]+)/,
+  ];
+  let secondaryPointsText = '';
+  for (const pattern of secondaryPointsPatterns) {
+    const match = markdown.match(pattern);
+    if (match) {
+      secondaryPointsText = match[1].trim();
+      break;
+    }
+  }
+  
   const mainPoints: AcupuncturePoint[] = mainPointsText.split(/[、,，]/)
-    .map(s => s.trim()).filter(s => s)
+    .map(s => s.trim()).filter(s => s && !s.includes('无'))
     .map(point => ({ 
       point, 
       meridian: getMeridian(point), 
@@ -35,10 +63,8 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
       technique: '平补平泻' 
     }));
 
-  const secondaryPointsMatch = markdown.match(/\*\*配穴\*\*[：:]\s*([^\n]+)/);
-  const secondaryPointsText = secondaryPointsMatch ? secondaryPointsMatch[1].trim() : '';
   const secondaryPoints: AcupuncturePoint[] = secondaryPointsText.split(/[、,，]/)
-    .map(s => s.trim()).filter(s => s)
+    .map(s => s.trim()).filter(s => s && !s.includes('无'))
     .map(point => ({ 
       point, 
       meridian: getMeridian(point), 
@@ -170,7 +196,16 @@ export async function submitDiagnosis(
   let messageCount = 0;
   const errorKeywords = ['非舌象', '不是舌象', '请重新上传', 'INVALID_IMAGE', 'LOW_QUALITY_IMAGE'];
   
+  // 设置超时（60秒）
+  const TIMEOUT = 60000;
+  const startTime = Date.now();
+  
   while (true) {
+    // 检查超时
+    if (Date.now() - startTime > TIMEOUT) {
+      throw new Error('辨证分析超时，请稍后重试。如果是图片问题，请确保上传的是舌象照片。');
+    }
+    
     const { done, value } = await reader.read();
     if (done) break;
     result += decoder.decode(value, { stream: true });
@@ -229,7 +264,6 @@ export async function submitDiagnosis(
   if (!answerContent) throw new Error('未获取到辨证结果');
 
   // 检测文本中的错误提示（非舌象图片等）
-  const errorKeywords = ['非舌象', '请重新上传', 'INVALID_IMAGE', '不是舌象'];
   for (const keyword of errorKeywords) {
     if (answerContent.includes(keyword)) {
       throw new Error('请上传舌象图片，图片中应清晰显示舌头表面特征（舌苔、舌色等）。');
