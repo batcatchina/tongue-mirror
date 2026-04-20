@@ -49,6 +49,17 @@ const DiagnosisPage: React.FC = () => {
     saveCase,
   } = useDiagnosisStore();
 
+
+  // 服务时间检查（默认 8:00-22:00）
+  const isServiceTime = (): boolean => {
+    const now = new Date();
+    const hour = now.getHours();
+    const startHour = parseInt(import.meta.env.VITE_SERVICE_START_HOUR || '8');
+    const endHour = parseInt(import.meta.env.VITE_SERVICE_END_HOUR || '22');
+    return hour >= startHour && hour < endHour;
+  };
+  const isInServiceTime = isServiceTime();
+
   // 处理压缩状态更新
   const handleCompressionProgress = (status: string) => {
     setCompressionStatus(status);
@@ -56,6 +67,12 @@ const DiagnosisPage: React.FC = () => {
 
   // 提交辨证
   const handleSubmit = async () => {
+    // 检查服务时间
+    if (!isInServiceTime) {
+      toast.error('服务时间：8:00-22:00，当前暂停服务');
+      return;
+    }
+
     // 验证必填项
     if (!inputFeatures.tongueColor.value) {
       toast.error('请选择舌色');
