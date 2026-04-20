@@ -123,30 +123,32 @@ export async function submitDiagnosis(
     has_image: !!input.imageData,
   }, null, 2);
 
-  // 构建消息列表
-  const messages = [];
+  // 构建多模态消息内容
+  const messageContent = [];
   
-  // 如果有图片，先发送图片
+  // 如果有图片，添加图片内容
   if (input.imageData) {
-    messages.push({
-      role: 'user',
-      content: input.imageData,
-      content_type: 'image'
+    messageContent.push({
+      type: 'image_url',
+      image_url: { url: input.imageData }
     });
   }
   
-  // 发送文本内容
-  messages.push({
-    role: 'user',
-    content: textContent,
-    content_type: 'text'
+  // 添加文本内容
+  messageContent.push({
+    type: 'text',
+    text: textContent
   });
 
   const requestPayload = {
     bot_id: BOT_ID,
     user_id: generateUserId(),
     stream: true,
-    additional_messages: messages
+    additional_messages: [{
+      role: 'user',
+      content: messageContent.length > 1 ? JSON.stringify(messageContent) : textContent,
+      content_type: messageContent.length > 1 ? 'object_string' : 'text'
+    }]
   };
 
   const response = await fetch(`${API_BASE_URL}/v3/chat`, {
