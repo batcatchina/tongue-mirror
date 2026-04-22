@@ -7,24 +7,18 @@ const API_TOKEN = 'pat_RpduRPvBPQIbpRLtAXy9NBFruewZlVKN4gH4aLgby6z2MgjNEejR2E7X8
 
 // ============================================
 // 统一错误关键词定义（核心配置）
+// 注意：只保留真正的错误信号，避免误判Bot的正常诊断反馈
 // ============================================
 export const ERROR_PATTERNS = [
-  '非舌象图片',
-  '不是舌象图片',
-  '图片不是舌象',
-  '请重新上传舌象',
   'INVALID_IMAGE',
   'LOW_QUALITY_IMAGE',
-  '非舌象照片',
-  '不是舌头照片',
+  'IMAGE_QUALITY_TOO_LOW',
+  '无法识别舌象',
+  '图片质量过低',
 ];
 
 export const ERROR_KEYWORDS = [
-  '非舌象',
-  '不是舌象',
-  '请重新上传',
   'INVALID_IMAGE',
-  '请上传舌象',
 ];
 
 // API错误码映射
@@ -202,17 +196,36 @@ function generateUserId(): string {
 // 错误检测工具函数
 // ============================================
 function detectErrorInContent(content: string): string | null {
+  // 首先检查是否是有效的辨证结果（包含关键诊断字段）
+  // 如果是有效的辨证结果，直接返回null（不认为是错误）
+  const successIndicators = [
+    '主要证型',
+    '病机分析',
+    '针灸方案',
+    '主穴',
+    '配穴',
+    '辨证结果',
+  ];
+  
+  const hasSuccessIndicator = successIndicators.some(indicator => content.includes(indicator));
+  if (hasSuccessIndicator) {
+    console.log('[错误检测] 检测到有效的辨证结果，跳过错误检测');
+    return null;
+  }
+  
   // 检查ERROR_PATTERNS（完整短语匹配）
   for (const pattern of ERROR_PATTERNS) {
     if (content.includes(pattern)) {
-      return '请上传舌象图片，图片中应清晰显示舌头表面特征（舌苔、舌色等）。';
+      console.log(`[错误检测] 检测到错误模式: ${pattern}`);
+      return '图片识别失败，请确保上传的是清晰的舌象照片。如无舌象图片，可直接手动输入舌象特征进行辨证。';
     }
   }
   
   // 检查ERROR_KEYWORDS（关键词匹配）
   for (const keyword of ERROR_KEYWORDS) {
     if (content.includes(keyword)) {
-      return '请上传舌象图片，图片中应清晰显示舌头表面特征（舌苔、舌色等）。';
+      console.log(`[错误检测] 检测到错误关键词: ${keyword}`);
+      return '图片识别失败，请确保上传的是清晰的舌象照片。如无舌象图片，可直接手动输入舌象特征进行辨证。';
     }
   }
   
@@ -388,10 +401,17 @@ export async function submitDiagnosis(
     if (done) break;
     result += decoder.decode(value, { stream: true });
     
-    // 检测错误关键词（完整短语匹配）
-    for (const pattern of ERROR_PATTERNS) {
-      if (result.includes(pattern)) {
-        throw new Error('请上传舌象图片，图片中应清晰显示舌头表面特征（舌苔、舌色等）。');
+    // 检测错误关键词（只在真正的错误模式下抛出）
+    // 如果已经检测到有效的辨证结果，跳过错误检测
+    const successIndicators = ['主要证型', '病机分析', '针灸方案', '主穴', '配穴'];
+    const hasSuccessIndicator = successIndicators.some(indicator => result.includes(indicator));
+    
+    if (!hasSuccessIndicator) {
+      for (const pattern of ERROR_PATTERNS) {
+        if (result.includes(pattern)) {
+          console.log(`[流式错误检测] 检测到错误模式: ${pattern}`);
+          throw new Error('图片识别失败，请确保上传的是清晰的舌象照片。如无舌象图片，可直接手动输入舌象特征进行辨证。');
+        }
       }
     }
     
