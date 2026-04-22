@@ -63,14 +63,51 @@ function parseMarkdownDiagnosis(markdown: string): DiagnosisOutput {
     ? organMatch[1].split(/[、,，\s]+/).filter((s: string) => s.trim()) 
     : [];
 
-  const evidenceMatches = markdown.matchAll(/\d+\.\s*([^\n]+)/g);
-  const diagnosisEvidence: DiagnosisEvidence[] = Array.from(evidenceMatches, (m, idx) => ({
-    feature: m[1].trim(),
-    weight: 1,
-    contribution: '主要依据',
-    matchDegree: 0.9,
-    ruleId: `rule_${idx + 1}`
-  })).slice(0, 5);
+  // 解析辨证依据 - 支持多种格式
+  const diagnosisEvidence: DiagnosisEvidence[] = [];
+  
+  // 格式1: "1. 红舌 → 提示热证（权重：85）"
+  const evidencePattern1 = /\d+\.\s*(.+?)\s*[→→]\s*(.+?)（权重[：:]\s*(\d+)）/g;
+  let match;
+  while ((match = evidencePattern1.exec(markdown)) !== null) {
+    diagnosisEvidence.push({
+      feature: match[1].trim(),
+      weight: parseInt(match[3]) || 5,
+      contribution: match[2].trim(),
+      matchDegree: 0.9,
+      ruleId: `rule_${diagnosisEvidence.length + 1}`
+    });
+  }
+  
+  // 格式2: "1. 红舌：提示热证" (简单格式)
+  if (diagnosisEvidence.length === 0) {
+    const evidencePattern2 = /\d+\.\s*(.+?)[：:]\s*(.+)/g;
+    while ((match = evidencePattern2.exec(markdown)) !== null) {
+      diagnosisEvidence.push({
+        feature: match[1].trim(),
+        weight: 5,
+        contribution: match[2].trim(),
+        matchDegree: 0.9,
+        ruleId: `rule_${diagnosisEvidence.length + 1}`
+      });
+    }
+  }
+  
+  // 格式3: 如果没有匹配到结构化格式，提取关键特征
+  if (diagnosisEvidence.length === 0) {
+    const featureKeywords = ['红舌', '淡白舌', '胖大', '瘦薄', '裂纹', '齿痕', '黄苔', '白苔', '厚苔', '薄苔'];
+    for (const keyword of featureKeywords) {
+      if (markdown.includes(keyword) && diagnosisEvidence.length < 5) {
+        diagnosisEvidence.push({
+          feature: keyword,
+          weight: 5,
+          contribution: '辨证参考',
+          matchDegree: 0.85,
+          ruleId: `rule_${diagnosisEvidence.length + 1}`
+        });
+      }
+    }
+  }
 
   // 解析主穴 - 支持多种格式（粗体和非粗体）
   const mainPointsPatterns = [
