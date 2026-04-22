@@ -233,13 +233,6 @@ function generateUserId(): string {
 // 错误检测工具函数
 // ============================================
 function detectErrorInContent(content: string): string | null {
-  // 【最高优先级】检查INVALID_IMAGE标记
-  // Bot返回INVALID_IMAGE时，无论后续内容如何，都必须报错
-  if (content.includes('INVALID_IMAGE')) {
-    console.log('[错误检测] 检测到INVALID_IMAGE标记，拒绝辨证');
-    return '当前图片不是舌象照片，无法进行辨证分析。请删除当前图片或上传清晰的舌象照片。';
-  }
-  
   // 检查是否是有效的辨证结果（包含关键诊断字段）
   const successIndicators = [
     '主要证型',
@@ -252,7 +245,7 @@ function detectErrorInContent(content: string): string | null {
   
   const hasSuccessIndicator = successIndicators.some(indicator => content.includes(indicator));
   if (hasSuccessIndicator) {
-    console.log('[错误检测] 检测到有效的辨证结果，跳过错误检测');
+    console.log('[错误检测] 检测到有效的辨证结果');
     return null;
   }
   
@@ -260,14 +253,6 @@ function detectErrorInContent(content: string): string | null {
   for (const pattern of ERROR_PATTERNS) {
     if (content.includes(pattern)) {
       console.log(`[错误检测] 检测到错误模式: ${pattern}`);
-      return '图片识别失败，请确保上传的是清晰的舌象照片。如无舌象图片，可直接手动输入舌象特征进行辨证。';
-    }
-  }
-  
-  // 检查ERROR_KEYWORDS
-  for (const keyword of ERROR_KEYWORDS) {
-    if (content.includes(keyword)) {
-      console.log(`[错误检测] 检测到错误关键词: ${keyword}`);
       return '图片识别失败，请确保上传的是清晰的舌象照片。如无舌象图片，可直接手动输入舌象特征进行辨证。';
     }
   }
@@ -444,16 +429,11 @@ export async function submitDiagnosis(
     if (done) break;
     result += decoder.decode(value, { stream: true });
     
-    // 【最高优先级】检测INVALID_IMAGE标记
-    if (result.includes('INVALID_IMAGE')) {
-      console.log('[流式错误检测] 检测到INVALID_IMAGE标记，拒绝辨证');
-      throw new Error('当前图片不是舌象照片，无法进行辨证分析。请删除当前图片或上传清晰的舌象照片。');
-    }
-    
-    // 检测错误关键词（只在真正的错误模式下抛出）
+    // 检测是否已有有效辨证结果
     const successIndicators = ['主要证型', '病机分析', '针灸方案', '主穴', '配穴'];
     const hasSuccessIndicator = successIndicators.some(indicator => result.includes(indicator));
     
+    // 只在没有有效结果时检测错误
     if (!hasSuccessIndicator) {
       for (const pattern of ERROR_PATTERNS) {
         if (result.includes(pattern)) {
