@@ -1,0 +1,76 @@
+{
+  "name": "tongue-mirror",
+  "version": "1.0.0",
+  "displayName": "舌镜 - 中医舌诊助手",
+  "description": "基于MCP协议的中医舌诊辨证辅助服务，支持舌象分析、证型判断和针灸选穴推荐",
+  "author": {
+    "name": "舌诊专项提升双轨计划"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/tongue-mirror"
+  },
+  "keywords": [
+    "mcp",
+    "tongue-diagnosis",
+    "chinese-medicine",
+    "acupuncture",
+    "healthcare"
+  ],
+  "categories": [
+    "healthcare",
+    "medical",
+    "wellness"
+  ],
+  "languages": [
+    "zh-CN",
+    "en-US"
+  ],
+  "platforms": {
+    "python": ">=3.8"
+  },
+  "dependencies": [
+    "mcp>=1.0.0",
+    "python-dotenv>=1.0.0"
+  ],
+  "entryPoint": "src/server.py",
+  "transport": "stdio",
+  "tools": [
+    {
+      "name": "analyze_tongue",
+      "description": "执行舌诊辨证分析"
+    },
+    {
+      "name": "validate_tongue_features",
+      "description": "验证舌象特征"
+    },
+    {
+      "name": "query_acupoints",
+      "description": "查询穴位信息"
+    }
+  ],
+  "resources": [
+    "tongue://feature-categories",
+    "tongue://syndrome-list",
+    "tongue://api-docs"
+  ],
+  "prompts": [
+    "tongue_diagnosis",
+    "quick_tongue_check"
+  ],
+  "configuration": {
+    "env": {
+      "TONGUE_API_KEY": {
+        "type": "string",
+        "required": true,
+        "description": "舌诊API密钥"
+      },
+      "API_BASE_URL": {
+        "type": "string",
+        "required": false,
+        "default": "https://api.example.com/v1",
+        "description": "API服务地址"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tongue-mirror": {
+      "command": "python",
+      "args": ["/absolute/path/to/tongue-mcp-server/src/server.py"],
+      "env": {
+        "TONGUE_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}

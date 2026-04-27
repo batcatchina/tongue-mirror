@@ -1,0 +1,55 @@
+{
+  "skill": {
+    "id": "tongue-diagnosis-assistant",
+    "name": "tongue-diagnosis-assistant",
+    "version": "1.0.0",
+    "displayName": "舌诊辨证助手",
+    "description": "中医舌诊辨证辅助技能，基于舌象特征进行辨证分析和针灸选穴推荐",
+    "author": {
+      "name": "舌诊专项提升双轨计划",
+      "contact": "contact@example.com"
+    },
+    "homepage": "https://tongue-diagnosis.example.com",
+    "tags": ["中医", "舌诊", "辨证", "针灸", "健康"],
+    "category": "healthcare",
+    "language": "zh-CN"
+  },
+  
+  "marketplace": {
+    "platform": "clawhub",
+    "submittedAt": "2026-04-22",
+    "status": "draft",
+    "visibility": "public",
+    "pricing": "free"
+  },
+  
+  "files": {
+    "main": "skills/tongue-diagnosis/SKILL.md",
+    "readme": "README.md",
+    "license": "LICENSE"
+  },
+  
+  "requirements": {
+    "python": ">=3.8",
+    "dependencies": [
+      "mcp>=1.0.0",
+      "python-dotenv>=1.0.0"
+    ]
+  },
+  
+  "permissions": {
+    "network": true,
+    "storage": "session"
+  },
+  
+  "environment": {
+    "required": ["TONGUE_API_KEY"],
+    "optional": ["API_BASE_URL"]
+  },
+  
+  "metadata": {
+    "downloads": 0,
+    "rating": 0,
+    "reviews": 0
+  }
+}

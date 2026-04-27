@@ -1,0 +1,62 @@
+{
+  "name": "tongue-mirror",
+  "displayName": "舌镜 MCP Server",
+  "slug": "tongue-mirror",
+  "tagline": "AI驱动的中医舌诊辨证助手",
+  "description": "基于Model Context Protocol的中医舌诊辨证辅助服务，能够分析舌象特征、判断证型、推荐针灸穴位。",
+  "category": "healthcare",
+  "tags": ["中医", "舌诊", "辨证", "针灸", "健康", "MCP", "AI"],
+  "language": "zh-CN",
+  "avatar": "tongue-mirror.png",
+  "screenshots": [
+    "screenshot-1.png",
+    "screenshot-2.png"
+  ],
+  "website": "https://tongue-diagnosis.example.com",
+  "documentation": "https://docs.example.com/tongue-mirror",
+  "repository": "https://github.com/example/tongue-mirror",
+  
+  "capabilities": {
+    "protocols": ["mcp", "openapi"],
+    "integrations": ["claude-desktop", "cursor", "openclaw"]
+  },
+  
+  "features": [
+    "舌诊辨证分析",
+    "特征有效性验证",
+    "针灸穴位推荐",
+    "生活调护建议",
+    "多证型支持"
+  ],
+  
+  "pricing": "free",
+  "license": "Apache-2.0",
+  
+  "author": {
+    "name": "舌诊专项提升双轨计划",
+    "contact": "contact@example.com"
+  },
+  
+  "version": {
+    "current": "1.0.0",
+    "releaseDate": "2026-04-22"
+  },
+  
+  "compatibility": {
+    "python": ">=3.8",
+    "mcp": ">=1.0.0"
+  },
+  
+  "demo": {
+    "enabled": true,
+    "exampleRequest": {
+      "tongue_color": "红",
+      "tongue_shape": "瘦薄",
+      "tongue_coating_color": "黄",
+      "tongue_coating_texture": "薄",
+      "patient_age": 45,
+      "patient_gender": "男",
+      "chief_complaint": "口干咽燥"
+    }
+  }
+}
