@@ -64,22 +64,27 @@ DIAGNOSIS_RULES = {
     }
 }
 
-# 分区辨证规则
+# 分区辨证规则 - 舌尖/舌边/舌中/舌根对应脏腑
 ZONE_DIAGNOSIS = {
-    "上焦区": {
-        "脏腑": ["心", "肺", "脑"],
-        "凹陷": {"证型": "心气不足", "治则": "补心气", "主穴": ["内关", "膻中"]},
-        "凸起": {"证型": "心火亢盛", "治则": "清心火", "主穴": ["少海", "神门"]}
+    "舌尖": {
+        "脏腑": ["心", "肺"],
+        "凹陷": {"证型": "心气不足", "治则": "补心气", "主穴": ["内关", "膻中"], "配穴": ["神门"]},
+        "鼓胀": {"证型": "心火亢盛", "治则": "清心火", "主穴": ["少海", "神门"], "配穴": ["通里"]}
     },
-    "中焦区": {
-        "脏腑": ["脾", "胃", "肝", "胆"],
-        "凹陷": {"证型": "脾气虚弱", "治则": "健脾益气", "主穴": ["脾俞", "胃俞"]},
-        "凸起": {"证型": "脾胃气滞", "治则": "理气和胃", "主穴": ["中脘", "足三里"]}
+    "舌边": {
+        "脏腑": ["肝", "胆"],
+        "凹陷": {"证型": "肝血不足", "治则": "养肝血", "主穴": ["肝俞", "太冲"], "配穴": ["三阴交"]},
+        "鼓胀": {"证型": "肝气郁结", "治则": "疏肝理气", "主穴": ["太冲", "期门"], "配穴": ["阳陵泉"]}
     },
-    "下焦区": {
-        "脏腑": ["肾", "膀胱", "生殖"],
-        "凹陷": {"证型": "肾气不固", "治则": "补肾固本", "主穴": ["关元", "命门"]},
-        "凸起": {"证型": "下焦湿热", "治则": "清利湿热", "主穴": ["委中", "阴陵泉"]}
+    "舌中": {
+        "脏腑": ["脾", "胃"],
+        "凹陷": {"证型": "脾气虚弱", "治则": "健脾益气", "主穴": ["脾俞", "胃俞"], "配穴": ["足三里"]},
+        "鼓胀": {"证型": "脾胃气滞", "治则": "理气和胃", "主穴": ["中脘", "足三里"], "配穴": ["内关"]}
+    },
+    "舌根": {
+        "脏腑": ["肾", "膀胱"],
+        "凹陷": {"证型": "肾气不固", "治则": "补肾固本", "主穴": ["关元", "命门"], "配穴": ["肾俞"]},
+        "鼓胀": {"证型": "下焦湿热", "治则": "清利湿热", "主穴": ["委中", "阴陵泉"], "配穴": ["膀胱俞"]}
     }
 }
 
@@ -91,6 +96,8 @@ def analyze_tongue(
     patient_age: int,
     patient_gender: str,
     chief_complaint: str,
+    shape_distribution: dict = None,  # 凹凸形态 {depression: [], bulge: []}
+    distribution_features: list = None,  # 舌色分布特征
     **kwargs
 ) -> dict:
     """执行舌诊辨证分析"""
@@ -149,31 +156,69 @@ def analyze_tongue(
         primary_syndrome = "脾虚湿盛证"  # 默认
         rule = DIAGNOSIS_RULES[primary_syndrome]
     
-    # 分区分析
+    # 分区凹凸分析 - 核心功能
     zone_analysis = {}
-    for zone, zone_rule in ZONE_DIAGNOSIS.items():
-        zone_feature = kwargs.get(f"{zone}_feature", "平坦")
-        if zone_feature in ["凹陷", "凸起"]:
-            zone_analysis[zone] = {
-                "状态": zone_feature,
-                "辨证": zone_rule[zone_feature]["证型"],
-                "主穴": zone_rule[zone_feature]["主穴"]
-            }
-        else:
-            zone_analysis[zone] = {"状态": "平坦", "辨证": "正常"}
+    zone_acupoints = []  # 分区对应的穴位
+    zone_syndromes = []  # 分区对应的证型
+    
+    # 区域映射
+    part_map = {"tip": "舌尖", "middle": "舌中", "sides": "舌边", "root": "舌根"}
+    
+    if shape_distribution:
+        # 处理凹陷
+        for part_key in shape_distribution.get("depression", []):
+            part_name = part_map.get(part_key, part_key)
+            if part_name in ZONE_DIAGNOSIS:
+                zone_rule = ZONE_DIAGNOSIS[part_name]
+                zone_info = zone_rule.get("凹陷", {})
+                zone_analysis[part_name] = {
+                    "状态": "凹陷",
+                    "脏腑": zone_rule["脏腑"],
+                    "辨证": zone_info.get("证型", ""),
+                    "治则": zone_info.get("治则", ""),
+                    "主穴": zone_info.get("主穴", []),
+                    "配穴": zone_info.get("配穴", [])
+                }
+                zone_acupoints.extend(zone_info.get("主穴", []))
+                zone_syndromes.append(zone_info.get("证型", ""))
+        
+        # 处理鼓胀
+        for part_key in shape_distribution.get("bulge", []):
+            part_name = part_map.get(part_key, part_key)
+            if part_name in ZONE_DIAGNOSIS:
+                zone_rule = ZONE_DIAGNOSIS[part_name]
+                zone_info = zone_rule.get("鼓胀", {})
+                zone_analysis[part_name] = {
+                    "状态": "鼓胀",
+                    "脏腑": zone_rule["脏腑"],
+                    "辨证": zone_info.get("证型", ""),
+                    "治则": zone_info.get("治则", ""),
+                    "主穴": zone_info.get("主穴", []),
+                    "配穴": zone_info.get("配穴", [])
+                }
+                zone_acupoints.extend(zone_info.get("主穴", []))
+                zone_syndromes.append(zone_info.get("证型", ""))
+    
+    # 根据凹凸分析补充辨证
+    if zone_syndromes:
+        # 将分区证型加入辨证依据
+        primary_syndrome = f"{primary_syndrome}，兼{zone_syndromes[0]}" if len(zone_syndromes) == 1 else f"{primary_syndrome}，兼{zone_syndromes[0]}、{zone_syndromes[1]}"
+    
+    # 合并穴位方案
+    all_main_acupoints = list(set(rule["主穴"] + zone_acupoints))
     
     return {
         "辨证结果": {
             "主要证型": primary_syndrome,
-            "证型得分": syndrome_scores.get(primary_syndrome, {}).get("score", 10),
-            "置信度": 0.75,
+            "证型得分": syndrome_scores.get(sorted_syndromes[0][0] if sorted_syndromes else "脾虚湿盛证", {}).get("score", 10),
+            "置信度": 0.85 if zone_analysis else 0.75,
             "病机": f"{primary_syndrome}，{rule['治则']}"
         },
-        "分区分析": zone_analysis,
-        "脏腑定位": rule["脏腑"],
+        "分区凹凸分析": zone_analysis,  # 核心功能：显示每个区域的凹凸状态和对应辨证
+        "脏腑定位": rule["脏腑"] + list(set([z["脏腑"][0] for z in zone_analysis.values()] if zone_analysis else [])),
         "针灸方案": {
             "治疗原则": rule["治则"],
-            "主穴": [{"穴位": x, "功效": ""} for x in rule["主穴"]],
+            "主穴": [{"穴位": x, "功效": ""} for x in all_main_acupoints[:5]],
             "配穴": [{"穴位": x, "功效": ""} for x in rule["配穴"]]
         },
         "辨证依据": [{"特征": f, "权重": 5, "贡献": "主证"} for f in features],
